@@ -12,6 +12,7 @@ export declare class DruidQueryCtrl extends QueryCtrl {
     getDimensionsAndMetrics: any;
     getMetrics: any;
     getDimensions: any;
+    getFilterValues: any;
     queryTypes: any;
     filterTypes: any;
     aggregatorTypes: any;
@@ -75,6 +76,7 @@ export declare class DruidQueryCtrl extends QueryCtrl {
     removeSelectMetric(index: any): void;
     clearCurrentSelectMetric(): void;
     addAggregator(): void;
+    editAggregator(index: any): void;
     removeAggregator(index: any): void;
     clearCurrentAggregator(): void;
     addPostAggregator(): void;

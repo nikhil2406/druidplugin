@@ -96,6 +96,13 @@ var DruidQueryCtrl = (function (_super) {
             _this.datasource.getDimensionsAndMetrics(_this.target.druidDS)
                 .then(callback);
         };
+        this.getFilterValues = function (query, callback) {
+            var dimension = _this.target.currentFilter.dimension;
+            _this.datasource.getFilterValues(_this.target, _this.panelCtrl.range, query)
+                .then(function (results) {
+                callback(results.data[0].result.map(function (datum) { return datum[dimension]; }));
+            });
+        };
         //this.$on('typeahead-updated', function() {
         //  $timeout(this.targetBlur);
         //});
@@ -218,6 +225,11 @@ var DruidQueryCtrl = (function (_super) {
         }
         this.targetBlur();
     };
+    DruidQueryCtrl.prototype.editAggregator = function (index) {
+        this.addAggregatorMode = true;
+        var delAggregator = this.target.aggregators.splice(index, 1);
+        this.target.currentAggregator = delAggregator[0];
+    };
     DruidQueryCtrl.prototype.removeAggregator = function (index) {
         this.target.aggregators.splice(index, 1);
         this.targetBlur();
@@ -267,7 +279,7 @@ var DruidQueryCtrl = (function (_super) {
         return lodash_1.default.has(this.queryTypeValidators, type);
     };
     DruidQueryCtrl.prototype.isValidArithmeticPostAggregatorFn = function (fn) {
-        return lodash_1.default.contains(this.arithmeticPostAggregator, fn);
+        return lodash_1.default.includes(this.arithmeticPostAggregator, fn);
     };
     DruidQueryCtrl.prototype.validateMaxDataPoints = function (target, errs) {
         if (target.maxDataPoints) {

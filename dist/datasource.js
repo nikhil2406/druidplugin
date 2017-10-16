@@ -30,6 +30,7 @@ function (angular, _, dateMath, moment) {
     this.basicAuth = instanceSettings.basicAuth;
     instanceSettings.jsonData = instanceSettings.jsonData || {};
     this.supportMetrics = true;
+    this.periodGranularity = instanceSettings.jsonData.periodGranularity;
 
     function replaceTemplateValues(obj, attrList) {
       var substitutedVals = attrList.map(function (attr) {
@@ -50,6 +51,7 @@ function (angular, _, dateMath, moment) {
       "selector": _.partialRight(replaceTemplateValues, ['value']),
       "regex": _.partialRight(replaceTemplateValues, ['pattern']),
       "javascript": _.partialRight(replaceTemplateValues, ['function']),
+      "search": _.partialRight(replaceTemplateValues, []),
     };
 
     this.testDatasource = function() {
@@ -71,6 +73,35 @@ function (angular, _, dateMath, moment) {
       });
     };
 
+    this.getFilterValues = function (target, panelRange, query) {
+        var topNquery = {
+            "queryType": "topN",
+            "dataSource": target.druidDS,
+            "granularity": 'all',
+            "threshold": 10,
+            "dimension": target.currentFilter.dimension,
+            "metric": "count",
+            "aggregations": [{ "type" : "count", "name" : "count" }],
+            "intervals" : getQueryIntervals(panelRange.from, panelRange.to)
+        };
+
+        var filters = [];
+        if(target.filters){
+            filters = angular.copy(target.filters);
+        }
+        filters.push({
+            "type": "search",
+            "dimension": target.currentFilter.dimension,
+            "query": {
+                "type": "insensitive_contains",
+                "value": query
+            }
+        });
+        topNquery.filter = buildFilterTree(filters);
+
+        return this._druidQuery(topNquery);
+    };
+
     this._get = function(relativeUrl, params) {
       return backendSrv.datasourceRequest({
         method: 'GET',
@@ -89,8 +120,8 @@ function (angular, _, dateMath, moment) {
       console.log(options);
 
       var promises = options.targets.map(function (target) {
-        if (_.isEmpty(target.druidDS) || (_.isEmpty(target.aggregators) && target.queryType !== "select")) {
-          console.log("target.druidDS: " + target.druidDS + ", target.aggregators: " + target.aggregators);
+        if (target.hide===true || _.isEmpty(target.druidDS) || (_.isEmpty(target.aggregators) && target.queryType !== "select")) {
+          console.log("target.hide: " + target.hide + ", target.druidDS: " + target.druidDS + ", target.aggregators: " + target.aggregators);
           var d = $q.defer();
           d.resolve([]);
           return d.promise;
@@ -102,6 +133,11 @@ function (angular, _, dateMath, moment) {
         //Round up to start of an interval
         //Width of bar chars in Grafana is determined by size of the smallest interval
         var roundedFrom = granularity === "all" ? from : roundUpStartTime(from, granularity);
+        if(dataSource.periodGranularity!=""){
+            if(granularity==='day'){
+                granularity = {"type": "period", "period": "P1D", "timeZone": dataSource.periodGranularity}
+            }
+        }
         return dataSource._doQuery(roundedFrom, to, granularity, target);
       });
 
